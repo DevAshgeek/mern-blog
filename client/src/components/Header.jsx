@@ -6,42 +6,21 @@ const baseURL = import.meta.env.VITE_SERVER_BASE_URL;
 
 export default function Header() {
   const { setUserInfo, userInfo } = useContext(UserContext);
-
   useEffect(() => {
-    if (!userInfo) {
-      return;
-    }
-
     fetch(`${baseURL}/profile`, {
       credentials: "include",
     }).then((response) => {
-      if (response.status === 401) {
-        setUserInfo(null);
-      } else if (response.ok) {
-        response.json().then((userInfo) => {
+      response
+        .json()
+        .then((userInfo) => {
           setUserInfo(userInfo);
+        })
+        .catch((error) => {
+          console.error("Error fetching profile:", error);
+          // Handle the error, e.g., redirect to a login page
         });
-      } else {
-        console.error("Error:", response.status);
-      }
     });
-  }, [userInfo, setUserInfo]);
-
-  // useEffect(() => {
-  //   fetch(`${baseURL}/profile`, {
-  //     credentials: "include",
-  //   }).then((response) => {
-  //     response
-  //       .json()
-  //       .then((userInfo) => {
-  //         setUserInfo(userInfo);
-  //       })
-  //       .catch((error) => {
-  //         console.error("Error fetching profile:", error);
-  //         // Handle the error, e.g., redirect to a login page
-  //       });
-  //   });
-  // }, []);
+  }, []);
 
   function logout() {
     fetch(`${baseURL}/logout`, {
