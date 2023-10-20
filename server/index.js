@@ -81,6 +81,24 @@ async function uploadToS3(path, originalFileName, mimetype) {
     return `https://${bucket}.s3.amazonaws.com/${newFileName}`;
 }
 
+function authenticateToken(req, res, next) {
+    const token = req.cookies.token;
+
+    if (!token) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    jwt.verify(token, secret, { algorithms: ['HS256'] }, (err, info) => {
+        if (err) {
+            return res.status(401).json({ error: 'Token verification failed' });
+        }
+        req.user = info; // Make user info available to the route handlers
+        next();
+    });
+}
+
+app.use('/post', authenticateToken);
+app.use('/profile', authenticateToken);
 
 app.post('/register', async (req, res) => {
     mongooseConnection();
@@ -207,31 +225,49 @@ app.put('/post', uploadMiddleware.single('file'), async (req, res) => {
 })
 
 
-app.get('/profile', (req, res) => {
-    mongooseConnection();
+// app.get('/profile', (req, res) => {
+//     mongooseConnection();
 
-    const { token } = req.cookies;
-    jwt.verify(token, secret, { algorithms: ['HS256'] }, (err, info) => {
-        if (err) {
-            console.error('Token verification error:', err);
-            return res.status(401).json({ error: 'Token verification failed' });
-        }
-        console.log('Token verification successful. User info:', info);
-        res.json(info);
-    });
+//     const { token } = req.cookies;
+//     jwt.verify(token, secret, { algorithms: ['HS256'] }, (err, info) => {
+//         if (err) {
+//             console.error('Token verification error:', err);
+//             return res.status(401).json({ error: 'Token verification failed' });
+//         }
+//         console.log('Token verification successful. User info:', info);
+//         res.json(info);
+//     });
+// });
+
+app.get('/profile', (req, res) => {
+
+    mongooseConnection();
+    // No need to verify the token here; it's already done by the middleware
+    res.json(req.user);
 });
 
 
+
+// app.get('/post', async (req, res) => {
+//     mongooseConnection();
+
+//     const posts = await Post.find()
+//         .populate('author', ['userName'])
+//         .sort({ createdAt: -1 })
+//         .limit(20);
+//     console.log(posts);
+//     res.json(posts);
+
+// });
+
 app.get('/post', async (req, res) => {
     mongooseConnection();
-
+    // No need to verify the token here; it's already done by the middleware
     const posts = await Post.find()
         .populate('author', ['userName'])
         .sort({ createdAt: -1 })
         .limit(20);
-    console.log(posts);
     res.json(posts);
-
 });
 
 app.get('/post/:id', async (req, res) => {
